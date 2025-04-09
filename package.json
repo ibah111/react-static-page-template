@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "VITE_NODE=dev vite",
-    "build": "VITE_NODE=prod tsc -b && vite build",
-    "prod": "VITE_NODE=prod serve -s dist",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "prod": "serve -s dist",
     "lint": "eslint .",
     "preview": "vite preview"
   },
