@@ -5,4 +5,18 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  // Настройки сервера разработки
+  server: {
+    // Автоматически открывать браузер при запуске
+    open: true,
+    // Автоматический перезапуск при изменении файлов
+    watch: {
+      usePolling: true,
+    },
+    // Hot Module Replacement
+    hmr: {
+      overlay: true,
+    },
+  },
+  // Оптимизация сборки
 });
