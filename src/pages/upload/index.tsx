@@ -1,12 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import getPortfolio, { PortfolioResponse } from "../../api/path/getPortfolio";
-import { Container, Typography, TextField, Box } from "@mui/material";
-import { DataGrid, GridColDef, GridColType } from "@mui/x-data-grid";
+import {
+  Container,
+  Typography,
+  TextField,
+  Box,
+  DialogTitle,
+  Dialog,
+} from "@mui/material";
+import {
+  DataGrid,
+  GridCellParams,
+  GridColDef,
+  GridColType,
+} from "@mui/x-data-grid";
+import { useNavigate } from "react-router-dom";
+import UploadForm from "./upload_form";
 
 export default function Upload() {
   const [portfolio, setPortfolio] = useState<PortfolioResponse[]>([]);
   const [searchValue, setSearchValue] = useState("");
+  const navigate = useNavigate();
 
   const getColumnType = (value: any): GridColType | undefined => {
     if (value === null || value === undefined) return undefined;
@@ -102,6 +117,17 @@ export default function Upload() {
 
   const columns = createColumns(portfolio);
 
+  const [open, setOpen] = useState(false);
+  const [portfolio_id, setPortfolioId] = useState(0);
+  const handleCellDoubleClick = (params: GridCellParams) => {
+    setOpen(true);
+    setPortfolioId(params.row.id);
+  };
+  const onClose = () => {
+    setOpen(false);
+    setPortfolioId(0);
+  };
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
@@ -117,9 +143,7 @@ export default function Upload() {
           />
           <Box sx={{ height: 600, width: "100%" }}>
             <DataGrid
-              onCellDoubleClick={(params) => {
-                console.log(params);
-              }}
+              onCellDoubleClick={handleCellDoubleClick}
               columns={columns}
               rows={portfolio}
               sx={{
@@ -134,6 +158,9 @@ export default function Upload() {
           </Box>
         </Box>
       </Box>
+      {open && (
+        <UploadForm open={open} onClose={onClose} portfolio_id={portfolio_id} />
+      )}
     </Container>
   );
 }
