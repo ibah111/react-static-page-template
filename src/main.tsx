@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material";
 import App from "./App.tsx";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 const theme = createTheme({
   palette: {
@@ -17,10 +18,21 @@ const theme = createTheme({
   },
 });
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+  },
+  {
+    path: "/test",
+    element: <>TEST PAGE</>,
+  },
+]);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
-      <App />
+      <RouterProvider router={router} />
     </ThemeProvider>
   </StrictMode>
 );
