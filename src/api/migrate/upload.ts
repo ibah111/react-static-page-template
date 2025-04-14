@@ -7,7 +7,7 @@ interface UploadInput {
   upload: boolean;
 }
 
-export default function upload(data: UploadInput) {
+export function upload(data: UploadInput) {
   try {
     return axios_instance.post("/migrate/upload", data);
   } catch (error) {

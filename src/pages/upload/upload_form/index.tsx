@@ -9,11 +9,15 @@ import {
   Select,
   MenuItem,
   Grid,
+  Autocomplete,
+  TextField,
+  Divider,
+  Checkbox,
+  Tooltip,
 } from "@mui/material";
 import React from "react";
 import readDoTypes from "../../../api/dotypes/read";
-import { PortfolioResponse } from "../../../api/path/getPortfolio";
-import upload from "../../../api/migrate/upload";
+import { upload as uploadApi } from "../../../api/migrate/upload";
 
 interface uploadFormProps extends DialogProps {
   portfolio_id: number;
@@ -28,12 +32,17 @@ export default function UploadForm({
 }: uploadFormProps) {
   const [types, setTypes] = React.useState<string[]>([]);
   const [type, setType] = React.useState<string>("");
-  const handleClick = () => {
-    upload({
+  const [upload, setUpload] = React.useState<boolean>(false);
+  const [include_type, setIncludeType] = React.useState<any>({
+    id: 1,
+    name: "Судебная работа",
+  });
+  const handleClick = async () => {
+    await uploadApi({
       do_type_name: type,
       r_portfolio_id: portfolio_id,
       include_type: "all",
-      upload: true,
+      upload: upload,
     });
   };
 
@@ -44,29 +53,54 @@ export default function UploadForm({
   }, []);
   return (
     <>
-      <Dialog open={open} onClose={onClose}>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
         <DialogTitle>
           <Typography variant="h6">
             Загрузка портфолио {portfolio_id}
           </Typography>
         </DialogTitle>
+        <Divider />
         <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Select
+          <Grid container spacing={2} xs={12} md={12}>
+            <Grid item xs={4} md={4}>
+              <Autocomplete
                 value={type}
-                onChange={(e) => setType(e.target.value)}
+                onChange={(event, newValue) => setType(newValue || "")}
+                options={types}
                 fullWidth
+                renderInput={(params) => (
+                  <TextField {...params} label="Тип" variant="outlined" />
+                )}
+              />
+            </Grid>
+            <Grid item xs={4} md={4}>
+              <Typography variant="h6">
+                Загрузить все типы документов
+              </Typography>
+              <Tooltip title="Сделать операцию с загрузкой документов">
+                <Checkbox
+                  value={upload}
+                  onChange={(_, newValue) => setUpload(newValue)}
+                />
+              </Tooltip>
+            </Grid>
+            <Grid item xs={4} md={4}>
+              <Select
+                fullWidth
+                variant="outlined"
+                label="Тип"
+                value={type}
+                onChange={(event, newValue) => setType(newValue || "")}
               >
-                {types.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
-                  </MenuItem>
-                ))}
+                <MenuItem value="all">Судебная работа</MenuItem>
+                <MenuItem value="selected">
+                  Исполнительное производство
+                </MenuItem>
               </Select>
             </Grid>
           </Grid>
         </DialogContent>
+        <Divider />
         <DialogActions>
           <Button onClick={handleClick}>Загрузить</Button>
         </DialogActions>
