@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import React from "react";
-import getPortfolio, { PortfolioResponse } from "./api/path/getPortfolio";
+import getPortfolio, { PortfolioResponse } from "../../api/path/getPortfolio";
 import { Container, Typography, TextField, Box } from "@mui/material";
 import { DataGrid, GridColDef, GridColType } from "@mui/x-data-grid";
 
-function App() {
+export default function Upload() {
   const [portfolio, setPortfolio] = useState<PortfolioResponse[]>([]);
   const [searchValue, setSearchValue] = useState("");
 
@@ -117,6 +117,9 @@ function App() {
           />
           <Box sx={{ height: 600, width: "100%" }}>
             <DataGrid
+              onCellDoubleClick={(params) => {
+                console.log(params);
+              }}
               columns={columns}
               rows={portfolio}
               sx={{
@@ -134,5 +137,3 @@ function App() {
     </Container>
   );
 }
-
-export default App;
