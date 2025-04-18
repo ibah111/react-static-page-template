@@ -1,28 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import getPortfolio, { PortfolioResponse } from "../../api/path/getPortfolio";
-import {
-  Container,
-  Typography,
-  TextField,
-  Box,
-  DialogTitle,
-  Dialog,
-} from "@mui/material";
+import { Container, Typography, TextField, Box } from "@mui/material";
 import {
   DataGrid,
   GridCellParams,
   GridColDef,
   GridColType,
 } from "@mui/x-data-grid";
-import { useNavigate } from "react-router-dom";
 import UploadForm from "./upload_form";
 
 export default function Upload() {
   const [portfolio, setPortfolio] = useState<PortfolioResponse[]>([]);
   const [searchValue, setSearchValue] = useState("");
-  const navigate = useNavigate();
-
   const getColumnType = (value: any): GridColType | undefined => {
     if (value === null || value === undefined) return undefined;
 

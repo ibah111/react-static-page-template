@@ -65,7 +65,7 @@ export default function UploadForm({
             <Grid item xs={4} md={4}>
               <Autocomplete
                 value={type}
-                onChange={(event, newValue) => setType(newValue || "")}
+                onChange={(_, newValue) => setType(newValue || "")}
                 options={types}
                 fullWidth
                 renderInput={(params) => (
@@ -89,8 +89,8 @@ export default function UploadForm({
                 fullWidth
                 variant="outlined"
                 label="Тип"
-                value={type}
-                onChange={(event, newValue) => setType(newValue || "")}
+                value={include_type}
+                onChange={(_, newValue) => setIncludeType(newValue)}
               >
                 <MenuItem value="all">Судебная работа</MenuItem>
                 <MenuItem value="selected">
