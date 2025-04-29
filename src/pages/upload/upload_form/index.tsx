@@ -14,10 +14,17 @@ import {
   Divider,
   Checkbox,
   Tooltip,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import React from "react";
 import readDoTypes from "../../../api/dotypes/read";
 import { upload as uploadApi } from "../../../api/migrate/upload";
+
+interface LawType {
+  id: number;
+  name: string;
+}
 
 interface uploadFormProps extends DialogProps {
   portfolio_id: number;
@@ -33,10 +40,20 @@ export default function UploadForm({
   const [types, setTypes] = React.useState<string[]>([]);
   const [type, setType] = React.useState<string>("");
   const [upload, setUpload] = React.useState<boolean>(false);
-  const [include_type, setIncludeType] = React.useState<any>({
-    id: 1,
-    name: "Судебная работа",
-  });
+  const law_types: LawType[] = [
+    {
+      id: 1,
+      name: "Судебная работа",
+    },
+    {
+      id: 2,
+      name: "Исполнительное производство",
+    },
+  ];
+  const [selected_law_type, setSelectedLawType] = React.useState<LawType>(
+    law_types[0]
+  );
+
   const handleClick = async () => {
     await uploadApi({
       do_type_name: type,
@@ -74,9 +91,6 @@ export default function UploadForm({
               />
             </Grid>
             <Grid item xs={4} md={4}>
-              <Typography variant="h6">
-                Загрузить все типы документов
-              </Typography>
               <Tooltip title="Сделать операцию с загрузкой документов">
                 <Checkbox
                   value={upload}
@@ -85,18 +99,25 @@ export default function UploadForm({
               </Tooltip>
             </Grid>
             <Grid item xs={4} md={4}>
-              <Select
-                fullWidth
-                variant="outlined"
-                label="Тип"
-                value={include_type}
-                onChange={(_, newValue) => setIncludeType(newValue)}
-              >
-                <MenuItem value="all">Судебная работа</MenuItem>
-                <MenuItem value="selected">
-                  Исполнительное производство
-                </MenuItem>
-              </Select>
+              <FormControl fullWidth>
+                <InputLabel>Тип</InputLabel>
+                <Select
+                  fullWidth
+                  variant="outlined"
+                  label="Тип"
+                  value={selected_law_type.name}
+                  onChange={(_, newValue) => {
+                    // @ts-ignore
+                    const value = newValue.props;
+                    console.log("value", value);
+                    setSelectedLawType(value.value);
+                  }}
+                >
+                  {law_types.map((law_type) => (
+                    <MenuItem value={law_type.id}>{law_type.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </DialogContent>
