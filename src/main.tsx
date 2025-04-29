@@ -1,7 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
 import Upload from "./pages/upload/index.tsx";
 import Test from "./pages/test/index.tsx";
 
@@ -27,6 +31,10 @@ const router = createBrowserRouter([
   {
     path: "/test",
     element: <Test />,
+  },
+  {
+    path: "/*",
+    element: <Navigate to="/" />,
   },
 ]);
 
