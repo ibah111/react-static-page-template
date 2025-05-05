@@ -59,6 +59,7 @@ export default function UploadForm({
       include_type: Number(select),
       upload: upload,
     });
+    onClose();
   };
 
   const handleSelectChange = (event: SelectChangeEvent) => {
