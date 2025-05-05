@@ -3,7 +3,7 @@ import { axios_instance } from "../../utils/axios_instance";
 interface UploadInput {
   do_type_name: string;
   r_portfolio_id: number;
-  include_type: string;
+  include_type: number;
   upload: boolean;
 }
 
