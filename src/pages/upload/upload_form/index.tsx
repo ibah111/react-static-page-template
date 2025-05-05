@@ -49,12 +49,12 @@ export default function UploadForm({
   portfolio_id,
 }: uploadFormProps) {
   const [types, setTypes] = React.useState<string[]>([]);
-  const [type, setType] = React.useState<string>("");
+  const [type, setType] = React.useState<string | null>(null);
   const [upload, setUpload] = React.useState<boolean>(false);
-  const [select, setSelect] = React.useState<string>();
+  const [select, setSelect] = React.useState<string>("1");
   const handleClick = async () => {
     await uploadApi({
-      do_type_name: type,
+      do_type_name: type || "",
       r_portfolio_id: portfolio_id,
       include_type: Number(select),
       upload: upload,
@@ -75,18 +75,14 @@ export default function UploadForm({
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-        <DialogTitle>
-          <Typography variant="h6">
-            Загрузка портфолио {portfolio_id}
-          </Typography>
-        </DialogTitle>
+        <DialogTitle>Загрузка портфолио {portfolio_id}</DialogTitle>
         <Divider />
         <DialogContent>
-          <Grid container spacing={2} xs={12} md={12}>
+          <Grid container spacing={2}>
             <Grid item xs={4} md={4}>
               <Autocomplete
                 value={type}
-                onChange={(_, newValue) => setType(newValue || "")}
+                onChange={(_, newValue) => setType(newValue)}
                 options={types}
                 fullWidth
                 renderInput={(params) => (
@@ -129,10 +125,10 @@ export default function UploadForm({
         </DialogContent>
         <Divider />
         <DialogActions>
-          <Grid container spacing={2} xs={12} md={12}>
+          <Grid container spacing={2}>
             <Grid item xs={10} md={10}>
-              <Typography variant="h6">
-                Values: {upload} {type}{" "}
+              <Typography variant="body1">
+                Values: {upload} {type || ""}{" "}
               </Typography>
             </Grid>
             <Grid
