@@ -53,12 +53,13 @@ export default function UploadForm({
   const [upload, setUpload] = React.useState<boolean>(false);
   const [select, setSelect] = React.useState<string>("1");
   const handleClick = async () => {
-    await uploadApi({
+    const body = {
       do_type_name: type || "",
       r_portfolio_id: portfolio_id,
       include_type: Number(select),
       upload: upload,
-    });
+    };
+    await uploadApi(body);
     onClose();
   };
 
@@ -129,7 +130,10 @@ export default function UploadForm({
           <Grid container spacing={2}>
             <Grid item xs={10} md={10}>
               <Typography variant="body1">
-                Values: {upload} {type || ""}{" "}
+                {`${upload ? "Загрузить" : "Проверить"}, Тип: "${
+                  law_types.find((type) => type.id === Number(select))?.name ||
+                  ""
+                }", Тип документа из ДО:"${type}"`}
               </Typography>
             </Grid>
             <Grid
