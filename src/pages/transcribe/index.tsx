@@ -92,6 +92,12 @@ export default function TranscribePage() {
         if (message.result) {
           // Обработка результата транскрибации
           console.log('Результат транскрибации:', message.result);
+          if (message.result.filename) {
+            console.log('Файл:', message.result.filename);
+          }
+          if (message.result.text_length) {
+            console.log('Длина текста:', message.result.text_length, 'символов');
+          }
         }
         break;
       case 'ai_response':

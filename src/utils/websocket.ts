@@ -5,7 +5,11 @@ export interface SocketMessage {
   type: 'transcription_progress' | 'transcription_complete' | 'ai_response' | 'error' | 'client_connected';
   message?: string;
   progress?: number;
-  result?: any;
+  result?: {
+    filename?: string;
+    text_length?: number;
+    status?: string;
+  };
   response?: string;
   error?: string;
 }
