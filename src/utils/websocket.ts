@@ -2,7 +2,7 @@ import React from "react";
 import { io, Socket } from "socket.io-client";
 
 export interface SocketMessage {
-  type: 'transcription_progress' | 'transcription_complete' | 'ai_response' | 'error' | 'client_connected';
+  type: 'transcription_progress' | 'transcription_complete' | 'ai_response' | 'error' | 'client_connected' | 'room_joined';
   message?: string;
   progress?: number;
   result?: {
@@ -76,6 +76,11 @@ export class TranscriptionSocket {
           console.log('Подтверждение подключения:', data);
         });
 
+        // Добавляем обработку подтверждения присоединения к комнате
+        this.socket.on('room_joined', (data: any) => {
+          console.log('Подтверждение присоединения к комнате:', data);
+        });
+
       } catch (error) {
         reject(error);
       }
@@ -83,20 +88,30 @@ export class TranscriptionSocket {
   }
 
   joinRoom(room: string): void {
+    console.log(`Попытка присоединиться к комнате: ${room}`);
+    console.log('Socket.IO статус:', this.socket?.connected);
+
     if (this.socket && this.socket.connected) {
       this.socket.emit('join_room', room);
       console.log(`Присоединился к комнате: ${room}`);
     } else {
       console.error('Socket.IO не подключен');
+      console.log('Socket объект:', this.socket);
+      console.log('Статус подключения:', this.socket?.connected);
     }
   }
 
   leaveRoom(room: string): void {
+    console.log(`Попытка покинуть комнату: ${room}`);
+    console.log('Socket.IO статус:', this.socket?.connected);
+
     if (this.socket && this.socket.connected) {
       this.socket.emit('leave_room', room);
       console.log(`Покинул комнату: ${room}`);
     } else {
       console.error('Socket.IO не подключен');
+      console.log('Socket объект:', this.socket);
+      console.log('Статус подключения:', this.socket?.connected);
     }
   }
 

@@ -10,6 +10,9 @@ export interface TranscriptionResponse {
   id: string;
   status: 'processing' | 'completed' | 'failed';
   message?: string;
+  filename?: string;
+  resume?: string;
+  transcribed_text?: string;
 }
 
 export interface TranscriptionResult {

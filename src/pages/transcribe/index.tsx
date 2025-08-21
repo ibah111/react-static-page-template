@@ -15,7 +15,8 @@ import {
   Card,
   CardContent,
   IconButton,
-  Chip
+  Chip,
+  Snackbar
 } from '@mui/material';
 import {
   CloudUpload,
@@ -27,15 +28,23 @@ import {
 import { styled } from '@mui/material/styles';
 import { TranscriptionAPI, TranscriptionRequest } from '../../api/transcription';
 import { SocketMessage, useTranscriptionSocket } from '../../utils/websocket';
+import {
+  showSnackbar,
+  handleSnackbarClose,
+  SnackbarState
+} from '../../utils/snackbar';
+import { socketServer } from '../../utils/server';
 
 // Стилизованный компонент для drag-n-drop
-const DropZone = styled(Paper)<{ $isDragOver: boolean }>(({ theme, $isDragOver }) => ({
-  border: `2px dashed ${$isDragOver ? theme.palette.primary.main : theme.palette.divider}`,
+const DropZone = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isDragOver'
+})<{ isDragOver: boolean }>(({ theme, isDragOver }) => ({
+  border: `2px dashed ${isDragOver ? theme.palette.primary.main : theme.palette.divider}`,
   borderRadius: theme.spacing(2),
   padding: theme.spacing(4),
   textAlign: 'center',
   cursor: 'pointer',
-  backgroundColor: $isDragOver ? theme.palette.action.hover : theme.palette.background.paper,
+  backgroundColor: isDragOver ? theme.palette.action.hover : theme.palette.background.paper,
   transition: 'all 0.2s ease-in-out',
   '&:hover': {
     borderColor: theme.palette.primary.main,
@@ -54,41 +63,120 @@ export default function TranscribePage() {
   const [progress, setProgress] = useState(0);
   const [transcriptionStatus, setTranscriptionStatus] = useState('');
   const [summaryStatus, setSummaryStatus] = useState('');
-  const [resultFile, setResultFile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFileReady, setIsFileReady] = useState(false);
+  const [snackbarState, setSnackbarState] = useState<SnackbarState>({
+    open: false,
+    messageInfo: undefined,
+  });
+
+  const [transribedText, setTransribedText] = useState('');
+  const [resume, setResume] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const socket_url = socketServer()
   // WebSocket для получения обновлений
-  const { connect, disconnect, send, isConnected } = useTranscriptionSocket(
-    'http://127.0.0.1:8000', // Socket.IO сервер
+  const { connect, disconnect, joinRoom, leaveRoom, send, isConnected } = useTranscriptionSocket(
+    socket_url, // Socket.IO сервер
     handleWebSocketMessage,
     handleWebSocketError,
     handleWebSocketClose
   );
+
+  // send может использоваться для отправки сообщений серверу
+  // например, для подтверждения получения сообщений или отправки команд
 
   // Загрузка доступных моделей при монтировании компонента
   useEffect(() => {
     loadAvailableModels();
   }, []);
 
+  // Подключение к Socket.IO при монтировании компонента
+  useEffect(() => {
+    console.log('Подключаюсь к Socket.IO...');
+    showSnackbar('Подключение к Socket.IO...', 'info', setSnackbarState);
+
+    connect().then(() => {
+      console.log('Socket.IO подключение успешно установлено');
+      showSnackbar('Подключен к Socket.IO серверу', 'success', setSnackbarState);
+    }).catch((error) => {
+      console.error('Ошибка подключения к Socket.IO:', error);
+      showSnackbar('Ошибка подключения к Socket.IO', 'error', setSnackbarState);
+    });
+    return () => {
+      console.log('Отключаюсь от Socket.IO...');
+      showSnackbar('Отключение от Socket.IO...', 'info', setSnackbarState);
+      disconnect();
+    };
+  }, [connect, disconnect]);
+
+  // Логирование изменений состояния
+  useEffect(() => {
+    console.log('=== ИЗМЕНЕНИЕ СОСТОЯНИЯ ===');
+    console.log('Прогресс изменился на:', progress);
+    console.log('Статус транскрибации изменился на:', transcriptionStatus);
+    console.log('Статус резюме изменился на:', summaryStatus);
+    console.log('Файл готов:', isFileReady);
+    console.log('=====================================');
+  }, [progress, transcriptionStatus, summaryStatus, isFileReady]);
+
+  // Логирование состояния подключения
+  useEffect(() => {
+    console.log('Socket.IO статус подключения изменился:', isConnected);
+    if (isConnected) {
+      showSnackbar('Socket.IO соединение установлено', 'success', setSnackbarState);
+    } else {
+      showSnackbar('Socket.IO соединение разорвано', 'warning', setSnackbarState);
+    }
+  }, [isConnected]);
+
   // Обработка WebSocket сообщений
   function handleWebSocketMessage(message: SocketMessage) {
+    console.log('=== ПОЛУЧЕНО SOCKET.IO СООБЩЕНИЕ ===');
+    console.log('Тип сообщения:', message.type);
+    console.log('Полное сообщение:', message);
+    console.log('Текущий прогресс:', progress);
+    console.log('Текущий статус транскрибации:', transcriptionStatus);
+    console.log('Текущий статус резюме:', summaryStatus);
+    console.log('=====================================');
+
+    // Проверяем, что сообщение имеет правильную структуру
+    if (!message.type) {
+      console.warn('Получено сообщение без типа:', message);
+      return;
+    }
+
+    // Отправляем подтверждение получения сообщения (для отладки)
+    if (isConnected && send) {
+      send({
+        type: 'message_received',
+        originalType: message.type,
+        timestamp: Date.now()
+      });
+    }
+
     switch (message.type) {
       case 'transcription_progress':
+        console.log('Обрабатываю transcription_progress');
         if (message.progress !== undefined) {
+          console.log('Устанавливаю прогресс:', message.progress);
           setProgress(message.progress);
         }
         if (message.message) {
+          console.log('Устанавливаю статус транскрибации:', message.message);
           setTranscriptionStatus(message.message);
+          showSnackbar(message.message, 'info', setSnackbarState);
         }
         break;
       case 'transcription_complete':
+        console.log('Обрабатываю transcription_complete');
         setIsProcessing(false);
-        setResultFile('result.txt');
+        setIsFileReady(true); // Файл готов к скачиванию
         setTranscriptionStatus('Транскрибация завершена');
+        showSnackbar('Транскрибация завершена!', 'success', setSnackbarState);
         if (message.result) {
           // Обработка результата транскрибации
           console.log('Результат транскрибации:', message.result);
@@ -101,20 +189,44 @@ export default function TranscribePage() {
         }
         break;
       case 'ai_response':
+        console.log('Обрабатываю ai_response');
         if (message.response) {
           setSummaryStatus('Резюме готово');
           console.log('Ответ ИИ:', message.response);
+          showSnackbar('Резюме готово!', 'success', setSnackbarState);
         }
         break;
       case 'error':
+        console.log('Обрабатываю error');
         if (message.error) {
           setError(message.error);
+          showSnackbar(`Ошибка: ${message.error}`, 'error', setSnackbarState);
         } else {
           setError('Произошла ошибка');
+          showSnackbar('Произошла ошибка', 'error', setSnackbarState);
         }
         setIsProcessing(false);
         break;
+      case 'client_connected':
+        console.log('Подтверждение подключения к Socket.IO:', message);
+        showSnackbar('Подтверждение подключения к серверу', 'info', setSnackbarState);
+        break;
+      case 'room_joined':
+        console.log('Подтверждение присоединения к комнате:', message);
+        showSnackbar('Подтверждение присоединения к комнате', 'success', setSnackbarState);
+        break;
+      default:
+        console.log('Неизвестный тип сообщения:', message.type);
     }
+
+    // Проверяем состояние после обработки
+    setTimeout(() => {
+      console.log('=== СОСТОЯНИЕ ПОСЛЕ ОБРАБОТКИ ===');
+      console.log('Прогресс:', progress);
+      console.log('Статус транскрибации:', transcriptionStatus);
+      console.log('Статус резюме:', summaryStatus);
+      console.log('=====================================');
+    }, 100);
   }
 
   function handleWebSocketError(error: any) {
@@ -198,7 +310,7 @@ export default function TranscribePage() {
   // Удаление выбранного файла
   const handleRemoveFile = () => {
     setSelectedFile(null);
-    setResultFile(null);
+    setIsFileReady(false);
     setProgress(0);
     setTranscriptionStatus('');
     setSummaryStatus('');
@@ -217,10 +329,7 @@ export default function TranscribePage() {
     setError(null);
 
     try {
-      // Подключаемся к WebSocket
-      await connect();
-
-            // Отправляем файл на сервер
+      // Отправляем файл на сервер
       const request: TranscriptionRequest = {
         file: selectedFile,
         prompt: prompt.trim(),
@@ -228,11 +337,57 @@ export default function TranscribePage() {
       };
 
       const response = await TranscriptionAPI.transcribeAndResume(request);
+      setTransribedText(response.transcribed_text || '');
+      setResume(response.resume || '');
+      console.log('=== ОТВЕТ ОТ API ===');
+      console.log('Полный ответ:', response);
+      console.log('ID транскрибации:', response.id);
+      console.log('Статус:', response.status);
+      console.log('Сообщение:', response.message);
+      console.log('=====================');
+
       setTranscriptionId(response.id);
 
-      // Отправляем сообщение в WebSocket для начала отслеживания
+      // Проверяем, что у нас есть ID
+      if (!response.id) {
+        console.error('ОШИБКА: API не вернул ID транскрибации!');
+        setError('Сервер не вернул ID транскрибации');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('ID транскрибации получен:', response.id);
+
+      // Присоединяемся к комнате для получения обновлений
       if (isConnected) {
-        send({ type: 'start_tracking', transcriptionId: response.id });
+        console.log(`Пытаюсь присоединиться к комнате: ${response.id}`);
+        console.log('Текущий статус Socket.IO:', isConnected);
+
+        joinRoom(response.id);
+        console.log(`Присоединился к комнате: ${response.id}`);
+        showSnackbar(`Присоединился к комнате: ${response.id}`, 'info', setSnackbarState);
+
+        // Проверяем, что мы действительно в комнате
+        setTimeout(() => {
+          console.log('Проверяю статус подключения после присоединения к комнате:', isConnected);
+          console.log('Текущий прогресс:', progress);
+          console.log('Текущий статус транскрибации:', transcriptionStatus);
+        }, 1000);
+      } else {
+        console.warn('Socket.IO не подключен, но продолжаем обработку');
+        console.log('Текущий статус подключения:', isConnected);
+
+        // Попробуем подключиться еще раз
+        console.log('Пытаюсь подключиться к Socket.IO...');
+        showSnackbar('Попытка подключения к Socket.IO...', 'warning', setSnackbarState);
+        connect().then(() => {
+          console.log('Подключился к Socket.IO, теперь присоединяюсь к комнате:', response.id);
+          joinRoom(response.id);
+          showSnackbar(`Присоединился к комнате: ${response.id}`, 'success', setSnackbarState);
+        }).catch((error) => {
+          console.error('Не удалось подключиться к Socket.IO:', error);
+          showSnackbar('Не удалось подключиться к Socket.IO', 'error', setSnackbarState);
+        });
       }
 
       setTranscriptionStatus('Файл загружен, начинаем обработку...');
@@ -247,6 +402,12 @@ export default function TranscribePage() {
   const handleStopProcessing = async () => {
     if (transcriptionId) {
       try {
+        // Покидаем комнату Socket.IO
+        if (isConnected) {
+          leaveRoom(transcriptionId);
+          console.log(`Покинул комнату: ${transcriptionId}`);
+        }
+
         await TranscriptionAPI.cancelTranscription(transcriptionId);
         setTranscriptionStatus('Обработка остановлена');
         setSummaryStatus('Обработка остановлена');
@@ -257,7 +418,6 @@ export default function TranscribePage() {
 
     setIsProcessing(false);
     setProgress(0);
-    disconnect();
   };
 
 
@@ -297,7 +457,7 @@ export default function TranscribePage() {
 
             {/* Drag & Drop зона */}
             <DropZone
-              $isDragOver={isDragOver}
+              isDragOver={isDragOver}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -442,16 +602,25 @@ export default function TranscribePage() {
             </Box>
 
             {/* Скачивание результата */}
-            {resultFile && (
-              <Button
-                variant="contained"
-                startIcon={<Download />}
-                onClick={handleDownloadResult}
-                fullWidth
-                color="success"
-              >
-                Скачать результат
-              </Button>
+            {isFileReady && transcriptionId && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Результат готов:
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={handleDownloadResult}
+                  fullWidth
+                  color="success"
+                  size="large"
+                >
+                  Скачать файл с транскриптом и резюме
+                </Button>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                  Файл содержит: транскрипт аудио + AI резюме
+                </Typography>
+              </Box>
             )}
           </Paper>
 
@@ -460,6 +629,19 @@ export default function TranscribePage() {
             <Typography variant="h6" gutterBottom>
               Информация
             </Typography>
+
+            {/* ID транскрибации для отладки */}
+            {transcriptionId && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  ID транскрибации:
+                </Typography>
+                <Typography variant="body2" fontFamily="monospace">
+                  {transcriptionId}
+                </Typography>
+              </Box>
+            )}
+
             <Typography variant="body2" color="text.secondary" paragraph>
               После загрузки файла и настройки параметров, нажмите "Начать обработку".
               Процесс включает в себя:
@@ -477,7 +659,58 @@ export default function TranscribePage() {
             </Box>
           </Paper>
         </Grid>
+        <Grid item xs={12} md={12}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={12}>
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Результат
+                </Typography>
+            <TextField
+              disabled={true}
+              fullWidth
+              label="Результат"
+              value={transribedText}
+              multiline
+              rows={10}
+              />
+              </Paper>
+            </Grid>
+          </Grid>
+            <Grid item xs={12} md={12}>
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Резюме
+              </Typography>
+              <TextField
+              disabled={true}
+              fullWidth
+              label="Резюме"
+              value={resume}
+              multiline
+              rows={10}
+              />
+              </Paper>
+            </Grid>
+        </Grid>
       </Grid>
+
+      {/* Snackbar для уведомлений */}
+      <Snackbar
+        key={snackbarState.messageInfo?.key}
+        open={snackbarState.open}
+        autoHideDuration={4000}
+        onClose={() => handleSnackbarClose(setSnackbarState)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => handleSnackbarClose(setSnackbarState)}
+          severity={snackbarState.messageInfo?.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarState.messageInfo?.message}
+        </Alert>
+      </Snackbar>
 
       {/* Отображение ошибок */}
       {error && (
