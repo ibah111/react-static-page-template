@@ -5,7 +5,9 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
+import Layout from "./components/Layout";
 import Main from "./pages/main/index.tsx";
+import TranscribePage from "./pages/transcribe/index.tsx";
 
 const theme = createTheme({
   palette: {
@@ -24,7 +26,17 @@ const theme = createTheme({
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Main />,
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <Main />,
+      },
+      {
+        path: "transcribe",
+        element: <TranscribePage />,
+      },
+    ],
   },
 ]);
 
