@@ -72,8 +72,8 @@ export default function TranscribePage() {
     messageInfo: undefined,
   });
 
-  const [transribedText, setTransribedText] = useState('');
-  const [resume, setResume] = useState('');
+  const [transribedText, setTransribedText] = useState<string>("");
+  const [resume, setResume] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,9 +336,15 @@ export default function TranscribePage() {
         model: selectedModel
       };
 
-      const response = await TranscriptionAPI.transcribeAndResume(request);
-      setTransribedText(response.transcribed_text || '');
-      setResume(response.resume || '');
+      const response = await TranscriptionAPI.transcribeAndResume(request).then((response) => {
+        showSnackbar('Транскрибация завершена!', 'success', setSnackbarState);
+
+        setTransribedText(response.transcribed_text || '');
+        setResume(response.resume || '');
+
+        return response;
+      });
+
       console.log('=== ОТВЕТ ОТ API ===');
       console.log('Полный ответ:', response);
       console.log('ID транскрибации:', response.id);
@@ -666,14 +672,12 @@ export default function TranscribePage() {
                 <Typography variant="h6" gutterBottom>
                   Результат
                 </Typography>
-            <TextField
+            {transribedText.length > 0 && <TextField
               disabled={true}
               fullWidth
-              label="Результат"
               value={transribedText}
               multiline
-              rows={10}
-              />
+              />}
               </Paper>
             </Grid>
           </Grid>
@@ -682,14 +686,12 @@ export default function TranscribePage() {
                 <Typography variant="h6" gutterBottom>
                   Резюме
               </Typography>
-              <TextField
+              {resume.length > 0 && <TextField
               disabled={true}
               fullWidth
-              label="Резюме"
-              value={resume}
-              multiline
-              rows={10}
-              />
+                value={resume}
+                multiline
+              />}
               </Paper>
             </Grid>
         </Grid>
