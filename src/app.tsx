@@ -3,11 +3,9 @@ import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material";
 import {
   createBrowserRouter,
-  Navigate,
   RouterProvider,
 } from "react-router-dom";
-import Upload from "./pages/upload/index.tsx";
-import Test from "./pages/test/index.tsx";
+import Main from "./pages/main/index.tsx";
 
 const theme = createTheme({
   palette: {
@@ -26,15 +24,7 @@ const theme = createTheme({
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Upload />,
-  },
-  {
-    path: "/test",
-    element: <Test />,
-  },
-  {
-    path: "/*",
-    element: <Navigate to="/" />,
+    element: <Main />,
   },
 ]);
 

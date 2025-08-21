@@ -1,8 +1,5 @@
-const octet = "apps.usb.ru";
-const server_url = `https://${octet}:4070/`;
+const server_url = `http://127.0.0.1:8000/`;
 
 export const server = (): string => {
-  const full_url = `${server_url}`;
-  console.log(full_url);
-  return full_url;
+  return server_url;
 };
