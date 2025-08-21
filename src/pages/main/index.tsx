@@ -1,5 +1,5 @@
 import { Box, Typography, Grid, Card, CardContent } from "@mui/material";
-import { Home, TextFields } from "@mui/icons-material";
+import { Home, TextFields, AudioFile, SmartToy } from "@mui/icons-material";
 
 export default function Main() {
   const features = [
@@ -10,9 +10,19 @@ export default function Main() {
     },
     {
       icon: <TextFields color="secondary" sx={{ fontSize: 40 }} />,
-      title: "Транскрибация",
-      description: "Страница для транскрибации видео в текст"
+      title: "Транскрибация + AI",
+      description: "Полная транскрибация с AI резюме"
     },
+    {
+      icon: <AudioFile color="success" sx={{ fontSize: 40 }} />,
+      title: "Только транскрибация",
+      description: "Простая транскрибация без AI обработки"
+    },
+    {
+      icon: <SmartToy color="info" sx={{ fontSize: 40 }} />,
+      title: "Только AI",
+      description: "AI обработка готового текста"
+    }
   ];
 
   return (
@@ -22,12 +32,12 @@ export default function Main() {
       </Typography>
 
       <Typography variant="h6" color="text.secondary" paragraph sx={{ mb: 4 }}>
-        Это главная страница вашего приложения. Используйте левую панель навигации для перехода между страницами.
+        Это главная страница вашего приложения для работы с транскрибацией и AI. Используйте левую панель навигации для перехода между страницами.
       </Typography>
 
       <Grid container spacing={3}>
         {features.map((feature, index) => (
-          <Grid item xs={12} md={4} key={index}>
+          <Grid item xs={12} md={6} lg={3} key={index}>
             <Card sx={{ height: "100%" }}>
               <CardContent sx={{ textAlign: "center", p: 3 }}>
                 <Box sx={{ mb: 2 }}>

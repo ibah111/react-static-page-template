@@ -8,6 +8,8 @@ import {
 import Layout from "./components/Layout";
 import Main from "./pages/main/index.tsx";
 import TranscribePage from "./pages/transcribe/index.tsx";
+import TranscribeOnlyPage from "./pages/transcribe-only/index.tsx";
+import AIOnlyPage from "./pages/ai-only/index.tsx";
 
 const theme = createTheme({
   palette: {
@@ -35,6 +37,14 @@ const router = createBrowserRouter([
       {
         path: "transcribe",
         element: <TranscribePage />,
+      },
+      {
+        path: "transcribe-only",
+        element: <TranscribeOnlyPage />,
+      },
+      {
+        path: "ai-only",
+        element: <AIOnlyPage />,
       },
     ],
   },

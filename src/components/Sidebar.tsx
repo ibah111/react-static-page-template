@@ -1,5 +1,5 @@
 import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Paper } from "@mui/material";
-import { Home, TextFields } from "@mui/icons-material";
+import { Home, TextFields, AudioFile, SmartToy } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Sidebar() {
@@ -8,7 +8,9 @@ export default function Sidebar() {
 
   const menuItems = [
     { text: "Главная", icon: <Home />, path: "/" },
-    { text: "Транскрибация", icon: <TextFields />, path: "/transcribe" },
+    { text: "Транскрибация + AI", icon: <TextFields />, path: "/transcribe" },
+    { text: "Только транскрибация", icon: <AudioFile />, path: "/transcribe-only" },
+    { text: "Только AI", icon: <SmartToy />, path: "/ai-only" },
   ];
 
   return (

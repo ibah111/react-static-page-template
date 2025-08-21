@@ -1,13 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
   Alert,
   LinearProgress,
@@ -25,8 +20,7 @@ import {
   Stop
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { TranscriptionAPI, TranscriptionRequest } from '../../api/transcription';
-import { useTranscriptionWebSocket, WebSocketMessage } from '../../utils/websocket';
+import { TranscriptionAPI } from '../../api/transcription';
 
 // Стилизованный компонент для drag-n-drop
 const DropZone = styled(Paper)<{ $isDragOver: boolean }>(({ theme, $isDragOver }) => ({
@@ -43,83 +37,17 @@ const DropZone = styled(Paper)<{ $isDragOver: boolean }>(({ theme, $isDragOver }
   },
 }));
 
-
-
-export default function TranscribePage() {
+export default function TranscribeOnlyPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [prompt, setPrompt] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [transcriptionStatus, setTranscriptionStatus] = useState('');
-  const [summaryStatus, setSummaryStatus] = useState('');
   const [resultFile, setResultFile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // WebSocket для получения обновлений
-  const { connect, disconnect, send, isConnected } = useTranscriptionWebSocket(
-    'ws://localhost:3001/transcription', // Замените на ваш WebSocket URL
-    handleWebSocketMessage,
-    handleWebSocketError,
-    handleWebSocketClose
-  );
-
-  // Загрузка доступных моделей при монтировании компонента
-  useEffect(() => {
-    loadAvailableModels();
-  }, []);
-
-  // Обработка WebSocket сообщений
-  function handleWebSocketMessage(message: WebSocketMessage) {
-    switch (message.type) {
-      case 'progress':
-        setProgress(message.data.progress);
-        break;
-      case 'transcription_status':
-        setTranscriptionStatus(message.data.status);
-        break;
-      case 'summary_status':
-        setSummaryStatus(message.data.status);
-        break;
-      case 'complete':
-        setIsProcessing(false);
-        setResultFile('result.txt');
-        setTranscriptionStatus('Транскрибация завершена');
-        setSummaryStatus('Резюме готово');
-        break;
-      case 'error':
-        setError(message.data.message);
-        setIsProcessing(false);
-        break;
-    }
-  }
-
-  function handleWebSocketError(error: Event) {
-    console.error('WebSocket ошибка:', error);
-    setError('Ошибка соединения с сервером');
-  }
-
-  function handleWebSocketClose() {
-    console.log('WebSocket соединение закрыто');
-  }
-
-  // Загрузка доступных моделей AI
-  const loadAvailableModels = async () => {
-    try {
-      const models = await TranscriptionAPI.getAvailableModels();
-      setAvailableModels(models);
-      if (models.length > 0) {
-        setSelectedModel(models[0]);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки моделей:', error);
-    }
-  };
 
   // Обработка drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -183,14 +111,13 @@ export default function TranscribePage() {
     setResultFile(null);
     setProgress(0);
     setTranscriptionStatus('');
-    setSummaryStatus('');
     setError(null);
   };
 
   // Запуск процесса транскрибации
   const handleStartProcessing = async () => {
-    if (!selectedFile || !prompt.trim() || !selectedModel) {
-      setError('Пожалуйста, заполните все поля');
+    if (!selectedFile) {
+      setError('Пожалуйста, выберите файл');
       return;
     }
 
@@ -199,25 +126,14 @@ export default function TranscribePage() {
     setError(null);
 
     try {
-      // Подключаемся к WebSocket
-      await connect();
-
-            // Отправляем файл на сервер
-      const request: TranscriptionRequest = {
-        file: selectedFile,
-        prompt: prompt.trim(),
-        model: selectedModel
-      };
-
-      const response = await TranscriptionAPI.transcribeAndResume(request);
+      // Отправляем файл на сервер для простой транскрибации
+      const response = await TranscriptionAPI.transcribeOnly(selectedFile);
       setTranscriptionId(response.id);
 
-      // Отправляем сообщение в WebSocket для начала отслеживания
-      if (isConnected) {
-        send({ type: 'start_tracking', transcriptionId: response.id });
-      }
+      setTranscriptionStatus('Файл загружен, начинаем транскрибацию...');
 
-      setTranscriptionStatus('Файл загружен, начинаем обработку...');
+      // Имитация процесса (замените на реальную логику с WebSocket)
+      simulateProcessing();
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при обработке файла');
@@ -230,8 +146,7 @@ export default function TranscribePage() {
     if (transcriptionId) {
       try {
         await TranscriptionAPI.cancelTranscription(transcriptionId);
-        setTranscriptionStatus('Обработка остановлена');
-        setSummaryStatus('Обработка остановлена');
+        setTranscriptionStatus('Транскрибация остановлена');
       } catch (err) {
         console.error('Ошибка при остановке:', err);
       }
@@ -239,10 +154,30 @@ export default function TranscribePage() {
 
     setIsProcessing(false);
     setProgress(0);
-    disconnect();
   };
 
+  // Имитация процесса (замените на реальную логику с WebSocket)
+  const simulateProcessing = () => {
+    let currentProgress = 0;
+    const interval = setInterval(() => {
+      currentProgress += Math.random() * 20;
+      if (currentProgress >= 100) {
+        currentProgress = 100;
+        clearInterval(interval);
+        setIsProcessing(false);
+        setResultFile('transcription.txt');
+        setTranscriptionStatus('Транскрибация завершена');
+      }
 
+      setProgress(currentProgress);
+
+      if (currentProgress < 50) {
+        setTranscriptionStatus('Обработка аудио...');
+      } else if (currentProgress < 100) {
+        setTranscriptionStatus('Транскрибация...');
+      }
+    }, 400);
+  };
 
   // Скачивание результата
   const handleDownloadResult = async () => {
@@ -252,7 +187,7 @@ export default function TranscribePage() {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `transcription_result_${transcriptionId}.txt`;
+        link.download = `transcription_${transcriptionId}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -266,11 +201,15 @@ export default function TranscribePage() {
   return (
     <Box>
       <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4 }}>
-        Транскрибация видео в текст
+        Простая транскрибация
+      </Typography>
+
+      <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 4 }}>
+        Загрузите аудио или видео файл для получения текстовой транскрипции без AI обработки.
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Левая колонка - загрузка файла и настройки */}
+        {/* Левая колонка - загрузка файла */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -325,35 +264,6 @@ export default function TranscribePage() {
               </Card>
             )}
 
-            {/* Поле для промпта */}
-            <TextField
-              fullWidth
-              label="Промпт для AI"
-              placeholder="Опишите, как должен быть обработан текст..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              multiline
-              rows={3}
-              sx={{ mb: 3 }}
-              helperText="Опишите, какую задачу должен выполнить AI (например: 'Создай краткое резюме', 'Выдели ключевые моменты')"
-            />
-
-            {/* Выбор модели AI */}
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Модель AI</InputLabel>
-              <Select
-                value={selectedModel}
-                label="Модель AI"
-                onChange={(e) => setSelectedModel(e.target.value)}
-              >
-                {availableModels.map((model) => (
-                  <MenuItem key={model} value={model}>
-                    <Typography variant="subtitle1">{model}</Typography>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
             {/* Кнопки управления */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               {!isProcessing ? (
@@ -361,10 +271,10 @@ export default function TranscribePage() {
                   variant="contained"
                   startIcon={<PlayArrow />}
                   onClick={handleStartProcessing}
-                  disabled={!selectedFile || !prompt.trim() || !selectedModel}
+                  disabled={!selectedFile}
                   fullWidth
                 >
-                  Начать обработку
+                  Начать транскрибацию
                 </Button>
               ) : (
                 <Button
@@ -385,7 +295,7 @@ export default function TranscribePage() {
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Статус обработки
+              Статус транскрибации
             </Typography>
 
             {/* Прогресс бар */}
@@ -400,25 +310,13 @@ export default function TranscribePage() {
             )}
 
             {/* Статус транскрибации */}
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Транскрибация:
+                Статус:
               </Typography>
               <Chip
                 label={transcriptionStatus || 'Ожидание...'}
                 color={transcriptionStatus === 'Транскрибация завершена' ? 'success' : 'default'}
-                variant="outlined"
-              />
-            </Box>
-
-            {/* Статус резюме */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Резюме:
-              </Typography>
-              <Chip
-                label={summaryStatus || 'Ожидание...'}
-                color={summaryStatus === 'Резюме готово' ? 'success' : 'default'}
                 variant="outlined"
               />
             </Box>
@@ -432,7 +330,7 @@ export default function TranscribePage() {
                 fullWidth
                 color="success"
               >
-                Скачать результат
+                Скачать транскрипцию
               </Button>
             )}
           </Paper>
@@ -443,18 +341,17 @@ export default function TranscribePage() {
               Информация
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              После загрузки файла и настройки параметров, нажмите "Начать обработку".
-              Процесс включает в себя:
+              Простая транскрибация включает в себя:
             </Typography>
             <Box component="ul" sx={{ pl: 2 }}>
               <Typography component="li" variant="body2" color="text.secondary">
                 Обработка аудио/видео файла
               </Typography>
               <Typography component="li" variant="body2" color="text.secondary">
-                Транскрибация в текст
+                Преобразование речи в текст
               </Typography>
               <Typography component="li" variant="body2" color="text.secondary">
-                Создание резюме с помощью выбранной AI модели
+                Сохранение результата в текстовом файле
               </Typography>
             </Box>
           </Paper>
