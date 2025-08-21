@@ -49,7 +49,6 @@ export class TranscriptionAPI {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 30000, // 30 секунд для загрузки файла
         }
       );
 
