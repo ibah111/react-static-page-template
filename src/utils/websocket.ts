@@ -1,63 +1,76 @@
 import React from "react";
+import { io, Socket } from "socket.io-client";
 
-export interface WebSocketMessage {
-  type: 'progress' | 'transcription_status' | 'summary_status' | 'error' | 'complete';
-  data: any;
+export interface SocketMessage {
+  type: 'transcription_progress' | 'transcription_complete' | 'ai_response' | 'error' | 'client_connected';
+  message?: string;
+  progress?: number;
+  result?: any;
+  response?: string;
+  error?: string;
 }
 
-export class TranscriptionWebSocket {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
+export class TranscriptionSocket {
+  private socket: Socket | null = null;
+  // private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
 
   constructor(
     private url: string,
-    private onMessage: (message: WebSocketMessage) => void,
-    private onError?: (error: Event) => void,
+    private onMessage: (message: SocketMessage) => void,
+    private onError?: (error: any) => void,
     private onClose?: () => void
   ) {}
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(this.url);
+        // Создаем Socket.IO соединение
+        this.socket = io(this.url, {
+          transports: ['websocket', 'polling'],
+          autoConnect: true,
+          reconnection: true,
+          reconnectionAttempts: this.maxReconnectAttempts,
+          reconnectionDelay: this.reconnectDelay,
+        });
 
-        this.ws.onopen = () => {
-          console.log('WebSocket соединение установлено');
-          this.reconnectAttempts = 0;
+        this.socket.on('connect', () => {
+          console.log('Socket.IO соединение установлено');
+          // this.reconnectAttempts = 0;
           resolve();
-        };
+        });
 
-        this.ws.onmessage = (event) => {
-          try {
-            const message: WebSocketMessage = JSON.parse(event.data);
-            this.onMessage(message);
-          } catch (error) {
-            console.error('Ошибка парсинга WebSocket сообщения:', error);
-          }
-        };
+        this.socket.on('disconnect', () => {
+          console.log('Socket.IO соединение разорвано');
+          this.onClose?.();
+        });
 
-        this.ws.onerror = (error) => {
-          console.error('WebSocket ошибка:', error);
+        this.socket.on('connect_error', (error) => {
+          console.error('Socket.IO ошибка подключения:', error);
           this.onError?.(error);
           reject(error);
-        };
+        });
 
-        this.ws.onclose = () => {
-          console.log('WebSocket соединение закрыто');
-          this.onClose?.();
+        // Обработка событий от сервера
+        this.socket.on('transcription_update', (data: SocketMessage) => {
+          console.log('Получено обновление транскрибации:', data);
+          this.onMessage(data);
+        });
 
-          // Попытка переподключения
-          if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            console.log(`Попытка переподключения ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+        this.socket.on('ai_update', (data: SocketMessage) => {
+          console.log('Получен ответ ИИ:', data);
+          this.onMessage(data);
+        });
 
-            setTimeout(() => {
-              this.connect().catch(console.error);
-            }, this.reconnectDelay * this.reconnectAttempts);
-          }
-        };
+        this.socket.on('error', (data: SocketMessage) => {
+          console.error('Получена ошибка:', data);
+          this.onMessage(data);
+        });
+
+        this.socket.on('client_connected', (data: any) => {
+          console.log('Подтверждение подключения:', data);
+        });
 
       } catch (error) {
         reject(error);
@@ -65,91 +78,129 @@ export class TranscriptionWebSocket {
     });
   }
 
-  send(message: any): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
+  joinRoom(room: string): void {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('join_room', room);
+      console.log(`Присоединился к комнате: ${room}`);
     } else {
-      console.error('WebSocket не подключен');
+      console.error('Socket.IO не подключен');
+    }
+  }
+
+  leaveRoom(room: string): void {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('leave_room', room);
+      console.log(`Покинул комнату: ${room}`);
+    } else {
+      console.error('Socket.IO не подключен');
+    }
+  }
+
+  send(message: any): void {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('message', message);
+    } else {
+      console.error('Socket.IO не подключен');
     }
   }
 
   disconnect(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
   }
 
   isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.socket?.connected || false;
   }
 }
 
-// Хук для использования WebSocket в компонентах
-export const useTranscriptionWebSocket = (
+// Хук для использования Socket.IO в компонентах
+export const useTranscriptionSocket = (
   url: string,
-  onMessage: (message: WebSocketMessage) => void,
-  onError?: (error: Event) => void,
+  onMessage: (message: SocketMessage) => void,
+  onError?: (error: any) => void,
   onClose?: () => void
 ) => {
-  const [ws, setWs] = React.useState<TranscriptionWebSocket | null>(null);
+  const [socket, setSocket] = React.useState<TranscriptionSocket | null>(null);
   const [isConnected, setIsConnected] = React.useState(false);
 
+  // Мемоизируем функции обратного вызова
+  const memoizedOnMessage = React.useCallback(onMessage, []);
+  const memoizedOnError = React.useCallback(onError || (() => {}), []);
+  const memoizedOnClose = React.useCallback(onClose || (() => {}), []);
+
   React.useEffect(() => {
-    const websocket = new TranscriptionWebSocket(
+    // Создаем экземпляр сокета только один раз
+    const socketInstance = new TranscriptionSocket(
       url,
       (message) => {
-        onMessage(message);
-        if (message.type === 'complete') {
+        memoizedOnMessage(message);
+        if (message.type === 'transcription_complete') {
           setIsConnected(false);
         }
       },
       (error) => {
         setIsConnected(false);
-        onError?.(error);
+        memoizedOnError(error);
       },
       () => {
         setIsConnected(false);
-        onClose?.();
+        memoizedOnClose();
       }
     );
 
-    setWs(websocket);
+    setSocket(socketInstance);
 
     return () => {
-      websocket.disconnect();
+      socketInstance.disconnect();
     };
-  }, [url, onMessage, onError, onClose]);
+  }, [url, memoizedOnMessage, memoizedOnError, memoizedOnClose]);
 
   const connect = React.useCallback(async () => {
-    if (ws) {
+    if (socket) {
       try {
-        await ws.connect();
+        await socket.connect();
         setIsConnected(true);
       } catch (error) {
-        console.error('Ошибка подключения к WebSocket:', error);
+        console.error('Ошибка подключения к Socket.IO:', error);
       }
     }
-  }, [ws]);
+  }, [socket]);
 
   const disconnect = React.useCallback(() => {
-    if (ws) {
-      ws.disconnect();
+    if (socket) {
+      socket.disconnect();
       setIsConnected(false);
     }
-  }, [ws]);
+  }, [socket]);
+
+  const joinRoom = React.useCallback((room: string) => {
+    if (socket) {
+      socket.joinRoom(room);
+    }
+  }, [socket]);
+
+  const leaveRoom = React.useCallback((room: string) => {
+    if (socket) {
+      socket.leaveRoom(room);
+    }
+  }, [socket]);
 
   const send = React.useCallback((message: any) => {
-    if (ws) {
-      ws.send(message);
+    if (socket) {
+      socket.send(message);
     }
-  }, [ws]);
+  }, [socket]);
 
   return {
     connect,
     disconnect,
+    joinRoom,
+    leaveRoom,
     send,
     isConnected,
-    ws
+    socket
   };
 };

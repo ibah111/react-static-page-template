@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { TranscriptionAPI, TranscriptionRequest } from '../../api/transcription';
-import { useTranscriptionWebSocket, WebSocketMessage } from '../../utils/websocket';
+import { SocketMessage, useTranscriptionSocket } from '../../utils/websocket';
 
 // Стилизованный компонент для drag-n-drop
 const DropZone = styled(Paper)<{ $isDragOver: boolean }>(({ theme, $isDragOver }) => ({
@@ -62,8 +62,8 @@ export default function TranscribePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // WebSocket для получения обновлений
-  const { connect, disconnect, send, isConnected } = useTranscriptionWebSocket(
-    'ws://localhost:3001/transcription', // Замените на ваш WebSocket URL
+  const { connect, disconnect, send, isConnected } = useTranscriptionSocket(
+    'http://127.0.0.1:8000', // Socket.IO сервер
     handleWebSocketMessage,
     handleWebSocketError,
     handleWebSocketClose
@@ -75,37 +75,49 @@ export default function TranscribePage() {
   }, []);
 
   // Обработка WebSocket сообщений
-  function handleWebSocketMessage(message: WebSocketMessage) {
+  function handleWebSocketMessage(message: SocketMessage) {
     switch (message.type) {
-      case 'progress':
-        setProgress(message.data.progress);
+      case 'transcription_progress':
+        if (message.progress !== undefined) {
+          setProgress(message.progress);
+        }
+        if (message.message) {
+          setTranscriptionStatus(message.message);
+        }
         break;
-      case 'transcription_status':
-        setTranscriptionStatus(message.data.status);
-        break;
-      case 'summary_status':
-        setSummaryStatus(message.data.status);
-        break;
-      case 'complete':
+      case 'transcription_complete':
         setIsProcessing(false);
         setResultFile('result.txt');
         setTranscriptionStatus('Транскрибация завершена');
-        setSummaryStatus('Резюме готово');
+        if (message.result) {
+          // Обработка результата транскрибации
+          console.log('Результат транскрибации:', message.result);
+        }
+        break;
+      case 'ai_response':
+        if (message.response) {
+          setSummaryStatus('Резюме готово');
+          console.log('Ответ ИИ:', message.response);
+        }
         break;
       case 'error':
-        setError(message.data.message);
+        if (message.error) {
+          setError(message.error);
+        } else {
+          setError('Произошла ошибка');
+        }
         setIsProcessing(false);
         break;
     }
   }
 
-  function handleWebSocketError(error: Event) {
-    console.error('WebSocket ошибка:', error);
+  function handleWebSocketError(error: any) {
+    console.error('Socket.IO ошибка:', error);
     setError('Ошибка соединения с сервером');
   }
 
   function handleWebSocketClose() {
-    console.log('WebSocket соединение закрыто');
+    console.log('Socket.IO соединение закрыто');
   }
 
   // Загрузка доступных моделей AI
