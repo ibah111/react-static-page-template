@@ -1,5 +1,19 @@
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Paper } from "@mui/material";
-import { Home, TextFields, AudioFile, SmartToy } from "@mui/icons-material";
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  Paper,
+} from "@mui/material";
+import {
+  Home,
+  TextFields,
+  // AudioFile,
+  // SmartToy
+} from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Sidebar() {
@@ -9,8 +23,8 @@ export default function Sidebar() {
   const menuItems = [
     { text: "Главная", icon: <Home />, path: "/" },
     { text: "Транскрибация + AI", icon: <TextFields />, path: "/transcribe" },
-    { text: "Только транскрибация", icon: <AudioFile />, path: "/transcribe-only" },
-    { text: "Только AI", icon: <SmartToy />, path: "/ai-only" },
+    // { text: "Только транскрибация", icon: <AudioFile />, path: "/transcribe-only" },
+    // { text: "Только AI", icon: <SmartToy />, path: "/ai-only" },
   ];
 
   return (
@@ -23,7 +37,7 @@ export default function Sidebar() {
         position: "fixed",
         left: 0,
         top: 0,
-        zIndex: 1000
+        zIndex: 1000,
       }}
     >
       <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
@@ -52,8 +66,11 @@ export default function Sidebar() {
             >
               <ListItemIcon
                 sx={{
-                  color: location.pathname === item.path ? "inherit" : "text.secondary",
-                  minWidth: 40
+                  color:
+                    location.pathname === item.path
+                      ? "inherit"
+                      : "text.secondary",
+                  minWidth: 40,
                 }}
               >
                 {item.icon}
