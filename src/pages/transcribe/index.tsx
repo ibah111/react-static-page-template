@@ -141,6 +141,7 @@ export default function TranscribePage() {
     console.log('Текущий прогресс:', progress);
     console.log('Текущий статус транскрибации:', transcriptionStatus);
     console.log('Текущий статус резюме:', summaryStatus);
+    console.log('Socket.IO подключен:', isConnected);
     console.log('=====================================');
 
     // Проверяем, что сообщение имеет правильную структуру
@@ -158,6 +159,7 @@ export default function TranscribePage() {
       });
     }
 
+    showSnackbar("get socket message: " + message.type, 'warning', setSnackbarState);
     switch (message.type) {
       case 'transcription_progress':
         console.log('Обрабатываю transcription_progress');
@@ -236,6 +238,7 @@ export default function TranscribePage() {
 
   function handleWebSocketClose() {
     console.log('Socket.IO соединение закрыто');
+    showSnackbar('Соединение с сервером разорвано', 'error', setSnackbarState);
   }
 
   // Загрузка доступных моделей AI
@@ -323,7 +326,7 @@ export default function TranscribePage() {
       setError('Пожалуйста, заполните все поля');
       return;
     }
-
+    showSnackbar('Начинаю обработку...', 'info', setSnackbarState);
     setIsProcessing(true);
     setProgress(0);
     setError(null);
@@ -338,10 +341,8 @@ export default function TranscribePage() {
 
       const response = await TranscriptionAPI.transcribeAndResume(request).then((response) => {
         showSnackbar('Транскрибация завершена!', 'success', setSnackbarState);
-
         setTransribedText(response.transcribed_text || '');
         setResume(response.resume || '');
-
         return response;
       });
 
@@ -406,6 +407,7 @@ export default function TranscribePage() {
 
   // Остановка процесса
   const handleStopProcessing = async () => {
+    showSnackbar('Остановка обработки...', 'error', setSnackbarState);
     if (transcriptionId) {
       try {
         // Покидаем комнату Socket.IO
@@ -419,6 +421,7 @@ export default function TranscribePage() {
         setSummaryStatus('Обработка остановлена');
       } catch (err) {
         console.error('Ошибка при остановке:', err);
+        showSnackbar('Ошибка при остановке', 'error', setSnackbarState);
       }
     }
 
@@ -672,12 +675,12 @@ export default function TranscribePage() {
                 <Typography variant="h6" gutterBottom>
                   Результат
                 </Typography>
-            {transribedText.length > 0 && <TextField
-              disabled={true}
-              fullWidth
-              value={transribedText}
-              multiline
-              />}
+                {transribedText.length > 0 && <TextField
+                  disabled={true}
+                  fullWidth
+                  value={transribedText}
+                  multiline
+                />}
               </Paper>
             </Grid>
           </Grid>
@@ -703,12 +706,13 @@ export default function TranscribePage() {
         open={snackbarState.open}
         autoHideDuration={4000}
         onClose={() => handleSnackbarClose(setSnackbarState)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
         <Alert
+          variant="filled"
           onClose={() => handleSnackbarClose(setSnackbarState)}
           severity={snackbarState.messageInfo?.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', maxHeight: '100px' }}
         >
           {snackbarState.messageInfo?.message}
         </Alert>

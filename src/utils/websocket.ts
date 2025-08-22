@@ -58,27 +58,32 @@ export class TranscriptionSocket {
 
         // Обработка событий от сервера
         this.socket.on('transcription_update', (data: SocketMessage) => {
-          console.log('Получено обновление транскрибации:', data);
+          console.log('📨 Получено обновление транскрибации:', data);
           this.onMessage(data);
         });
 
         this.socket.on('ai_update', (data: SocketMessage) => {
-          console.log('Получен ответ ИИ:', data);
+          console.log('🤖 Получен ответ ИИ:', data);
           this.onMessage(data);
         });
 
         this.socket.on('error', (data: SocketMessage) => {
-          console.error('Получена ошибка:', data);
+          console.error('🚨 Получена ошибка:', data);
           this.onMessage(data);
         });
 
         this.socket.on('client_connected', (data: any) => {
-          console.log('Подтверждение подключения:', data);
+          console.log('🔌 Подтверждение подключения:', data);
         });
 
         // Добавляем обработку подтверждения присоединения к комнате
         this.socket.on('room_joined', (data: any) => {
-          console.log('Подтверждение присоединения к комнате:', data);
+          console.log('🚪 Подтверждение присоединения к комнате:', data);
+        });
+
+        // Добавляем обработчик для всех сообщений для отладки
+        this.socket.onAny((eventName: string, ...args: any[]) => {
+          console.log(`🔍 Получено событие ${eventName}:`, args);
         });
 
       } catch (error) {
@@ -94,6 +99,11 @@ export class TranscriptionSocket {
     if (this.socket && this.socket.connected) {
       this.socket.emit('join_room', room);
       console.log(`Присоединился к комнате: ${room}`);
+
+      // Добавляем обработчик для подтверждения присоединения к комнате
+      this.socket.once('room_joined', (data: any) => {
+        console.log(`✅ Подтверждение присоединения к комнате ${room}:`, data);
+      });
     } else {
       console.error('Socket.IO не подключен');
       console.log('Socket объект:', this.socket);
