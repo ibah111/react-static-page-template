@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useTranscriptionSocket } from '../utils/websocket';
-import { socketServer } from '../utils/server';
+import { server as socketServer } from '../utils/server';
 import { Button, Box, Typography, Paper, List, ListItem, ListItemText } from '@mui/material';
 
 interface Message {
