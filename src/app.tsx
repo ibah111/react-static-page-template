@@ -1,10 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material";
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./components/Layout";
 import Main from "./pages/main/index.tsx";
 import TranscribePage from "./pages/transcribe/index.tsx";
@@ -31,6 +28,11 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       {
+        path: "*",
+        element: <Main />,
+      },
+      {
+        path: "/",
         index: true,
         element: <Main />,
       },
