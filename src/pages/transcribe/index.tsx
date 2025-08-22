@@ -342,50 +342,33 @@ export default function TranscribePage() {
       const response = await TranscriptionAPI.transcribeAndResume(request).then((response) => {
         showSnackbar('Транскрибация завершена!', 'success', setSnackbarState);
         setTransribedText(response.transcribed_text || '');
+        setTranscriptionStatus('Транскрибация завершена');
         setResume(response.resume || '');
+        setSummaryStatus('Резюме готово');
+        setIsProcessing(false);
+        setSelectedFile(null);
         return response;
       });
-
-      console.log('=== ОТВЕТ ОТ API ===');
-      console.log('Полный ответ:', response);
-      console.log('ID транскрибации:', response.id);
-      console.log('Статус:', response.status);
-      console.log('Сообщение:', response.message);
-      console.log('=====================');
 
       setTranscriptionId(response.id);
 
       // Проверяем, что у нас есть ID
       if (!response.id) {
-        console.error('ОШИБКА: API не вернул ID транскрибации!');
         setError('Сервер не вернул ID транскрибации');
         setIsProcessing(false);
         return;
       }
 
-      console.log('ID транскрибации получен:', response.id);
-
       // Присоединяемся к комнате для получения обновлений
       if (isConnected) {
-        console.log(`Пытаюсь присоединиться к комнате: ${response.id}`);
-        console.log('Текущий статус Socket.IO:', isConnected);
-
         joinRoom(response.id);
-        console.log(`Присоединился к комнате: ${response.id}`);
         showSnackbar(`Присоединился к комнате: ${response.id}`, 'info', setSnackbarState);
 
         // Проверяем, что мы действительно в комнате
         setTimeout(() => {
-          console.log('Проверяю статус подключения после присоединения к комнате:', isConnected);
-          console.log('Текущий прогресс:', progress);
-          console.log('Текущий статус транскрибации:', transcriptionStatus);
         }, 1000);
       } else {
-        console.warn('Socket.IO не подключен, но продолжаем обработку');
-        console.log('Текущий статус подключения:', isConnected);
-
         // Попробуем подключиться еще раз
-        console.log('Пытаюсь подключиться к Socket.IO...');
         showSnackbar('Попытка подключения к Socket.IO...', 'warning', setSnackbarState);
         connect().then(() => {
           console.log('Подключился к Socket.IO, теперь присоединяюсь к комнате:', response.id);
@@ -579,10 +562,10 @@ export default function TranscribePage() {
             {isProcessing && (
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Прогресс</Typography>
-                  <Typography variant="body2">{Math.round(progress)}%</Typography>
+                  <Typography variant="body2">{transcriptionStatus}</Typography>
+                  {/* <Typography variant="body2">{Math.round(progress)}%</Typography> */}
                 </Box>
-                <LinearProgress variant="determinate" value={progress} />
+                {/* <LinearProgress variant="determinate" value={progress} /> */}
               </Box>
             )}
 
